@@ -26,8 +26,8 @@ export function SmoothScroll() {
       anchors: true,
       virtualScroll: soft?.gate,
       syncTouch: true,
-      syncTouchLerp: 0.09,
-      touchInertiaExponent: 1.35,
+      syncTouchLerp: 0.14,
+      touchInertiaExponent: 1.6,
       // Sideways rails (product racks, swipe rows) and scrollable dialogs keep their own native scrolling.
       allowNestedScroll: true,
     });
