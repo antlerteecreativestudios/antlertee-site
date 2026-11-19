@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type PointerEvent } from "react";
 import { Picture } from "@/components/Picture";
 import { collections } from "@/content/copy";
 import { gsap, ScrollTrigger } from "@/lib/gsap";
@@ -14,7 +14,8 @@ const pad = (n: number) => String(n).padStart(2, "0");
 /**
  * Collections orbit: pieces swing round an arc as you scroll (pinned, snapping to each piece).
  * The two-weight title wipes in, the spec card swaps and a colour band follows the active piece.
- * Under reduced motion it is not pinned; the buttons switch pieces directly.
+ * It pins on every screen tall enough (phones included); under reduced motion and on landscape phones it is not
+ * pinned. Swiping the stage or the dots also switch pieces directly.
  */
 export function Orbit() {
   const sectionRef = useRef<HTMLElement>(null);
@@ -135,7 +136,9 @@ export function Orbit() {
     });
     ro.observe(stage);
 
-    // Pinned frame: only while the screen is tall enough to hold it (a landscape phone scrolls the section normally).
+    // Pinned frame on every screen tall enough to hold it, phones included (the owner wants the locked scroll there):
+    // scrolling steps through the pieces. Sideways swipes on the stage and the dots also change pieces. Landscape
+    // phones (under 520px tall) scroll past natively because the frame doesn't fit.
     let st: ScrollTrigger | null = null;
     const tallEnough = window.matchMedia("(min-height: 520px)");
     const createPin = () => {
@@ -193,6 +196,27 @@ export function Orbit() {
     }
   };
 
+  // Swipe the stage sideways (touch and pen) to step to the next or previous piece. The stage is `touch-action: pan-y`,
+  // so vertical swipes still scroll the page natively; those end in pointercancel and are ignored here.
+  const swipeRef = useRef<{ id: number; x: number; y: number } | null>(null);
+  const onStageDown = (e: PointerEvent<HTMLDivElement>) => {
+    if (e.pointerType === "mouse" || !e.isPrimary) return;
+    swipeRef.current = { id: e.pointerId, x: e.clientX, y: e.clientY };
+  };
+  const onStageUp = (e: PointerEvent<HTMLDivElement>) => {
+    const start = swipeRef.current;
+    swipeRef.current = null;
+    if (!start || start.id !== e.pointerId) return;
+    const dx = e.clientX - start.x;
+    const dy = e.clientY - start.y;
+    if (Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy) * 1.2) return;
+    const next = Math.min(N - 1, Math.max(0, activeRef.current + (dx < 0 ? 1 : -1)));
+    if (next !== activeRef.current) select(next);
+  };
+  const onStageCancel = () => {
+    swipeRef.current = null;
+  };
+
   const current = collections[active];
 
   // GSAP wraps the pinned <section> in a "pin-spacer". React must own the node it later removes, so the section sits
@@ -208,17 +232,25 @@ export function Orbit() {
         aria-roledescription="carousel"
         aria-labelledby="orbit-title"
       >
-        <h2 id="orbit-title" className="sr-only">
-          Collections
-        </h2>
-        <div className="band band-yellow band-head" data-nav="yellow">
-          <p className="br kicker">Collections</p>
-          <p className="br" aria-hidden="true">
-            {pad(active + 1)} / {pad(N)}
+        <div className="band band-yellow band-head orbit-head" data-nav="yellow">
+          <div className="orbit-head-text">
+            <p className="kicker">Collections</p>
+            <h2 id="orbit-title" className="orbit-h">
+              Fresh off the floor<span className="orbit-dot">.</span>
+            </h2>
+          </div>
+          <p className="orbit-count" aria-hidden="true">
+            <span>{pad(active + 1)}</span> / {pad(N)}
           </p>
         </div>
         <div className="orbit-in" data-nav="light">
-          <div className="stage" ref={stageRef}>
+          <div
+            className="stage"
+            ref={stageRef}
+            onPointerDown={onStageDown}
+            onPointerUp={onStageUp}
+            onPointerCancel={onStageCancel}
+          >
             <svg aria-hidden="true">
               <circle ref={bandRef} fill="none" strokeLinecap="round" opacity={0.28} />
             </svg>

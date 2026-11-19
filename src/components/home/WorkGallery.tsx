@@ -8,11 +8,15 @@ import { gsap, ScrollTrigger } from "@/lib/gsap";
 import { useMediaQuery } from "@/lib/use-media";
 
 /**
- * "Built here." Desktop: the section pins and the row of cards scrolls sideways with the page.
- * Mobile and reduced motion: a native, swipeable, scroll-snapping row.
+ * "Built here." The section pins and the row of cards scrolls sideways as you scroll down, on every screen size
+ * including phones (the owner wants the locked, guided scroll there too). Reduced motion gets a native swipeable,
+ * scroll-snapping row instead. The CSS swipe mode in globals.css uses the same query (keep them in step).
  */
+const PIN_QUERY = "(prefers-reduced-motion: no-preference) and (min-height: 520px)";
+const SCROLL_QUERY = "(prefers-reduced-motion: reduce), (max-height: 519.98px)";
+
 export function WorkGallery() {
-  const pinned = useMediaQuery("(min-width: 860px) and (prefers-reduced-motion: no-preference)", true);
+  const pinned = useMediaQuery(PIN_QUERY, true);
   const sectionRef = useRef<HTMLElement>(null);
   const trackRef = useRef<HTMLUListElement>(null);
   const stRef = useRef<ScrollTrigger | null>(null);
@@ -23,7 +27,7 @@ export function WorkGallery() {
     if (!section || !track) return;
     const mm = gsap.matchMedia();
     mm.add(
-      { pin: "(min-width: 860px) and (prefers-reduced-motion: no-preference)", scroll: "(max-width: 859.98px), (prefers-reduced-motion: reduce)" },
+      { pin: PIN_QUERY, scroll: SCROLL_QUERY },
       (context) => {
         const isPin = Boolean(context.conditions?.pin);
         if (!isPin) return;

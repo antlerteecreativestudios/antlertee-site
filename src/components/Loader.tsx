@@ -41,7 +41,7 @@ export function Loader() {
       <div>
         <div className="br">Karachi, PK</div>
         {/* eslint-disable-next-line @next/next/no-img-element -- static export, decorative brand mark */}
-        <img className="loader-logo" src="/brand/logo-full-ink.png" alt="" width={520} height={1012} />
+        <img className="loader-logo" src="/brand/logo-full-ink.webp" alt="" width={520} height={1012} fetchPriority="high" />
         <div className="br">Creative Studios</div>
       </div>
       <i className="loader-bar" />

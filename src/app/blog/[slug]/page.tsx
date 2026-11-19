@@ -2,30 +2,33 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Picture } from "@/components/Picture";
 import { QuoteCta } from "@/components/QuoteCta";
-import { formatPostDate, getPost, posts, type Block } from "@/content/blog";
+import { formatPostDate, type Block } from "@/content/blog";
 import { SITE_URL, brand } from "@/content/site";
+import { getPost, getPosts } from "@/lib/cms/content";
 import { absoluteUrl } from "@/lib/media";
 import { pageMeta } from "@/lib/meta";
 import { slotImage } from "@/server/media";
+import { jsonLdScript } from "@/lib/json-ld";
 
 interface Params {
   params: Promise<{ slug: string }>;
 }
 
-export const dynamicParams = false;
+// Posts published in the content studio get their page on first visit (and are then cached), without a redeploy.
+export const dynamicParams = true;
 
-export function generateStaticParams() {
-  return posts.map((p) => ({ slug: p.slug }));
+export async function generateStaticParams() {
+  return (await getPosts()).map((p) => ({ slug: p.slug }));
 }
 
 export async function generateMetadata({ params }: Params) {
   const { slug } = await params;
-  const post = getPost(slug);
+  const post = await getPost(slug);
   if (!post) return {};
   const img = await slotImage(post.image);
   return pageMeta({
-    title: post.title,
-    description: post.summary,
+    title: post.seoTitle ?? post.title,
+    description: post.seoDescription ?? post.summary,
     path: `/blog/${post.slug}/`,
     image: { url: img.src, width: img.width, height: img.height, alt: img.alt },
   });
@@ -60,9 +63,9 @@ function renderBlock(block: Block, i: number) {
 
 export default async function PostPage({ params }: Params) {
   const { slug } = await params;
-  const post = getPost(slug);
+  const post = await getPost(slug);
   if (!post) notFound();
-  const more = posts.filter((p) => p.slug !== post.slug).slice(0, 2);
+  const more = (await getPosts()).filter((p) => p.slug !== post.slug).slice(0, 2);
   const img = await slotImage(post.image);
   const jsonLd = {
     "@context": "https://schema.org",
@@ -70,6 +73,7 @@ export default async function PostPage({ params }: Params) {
     headline: post.title,
     description: post.summary,
     datePublished: post.date,
+    ...(post.updatedAt ? { dateModified: post.updatedAt } : {}),
     image: absoluteUrl(img.src, SITE_URL),
     mainEntityOfPage: `${SITE_URL}/blog/${post.slug}/`,
     author: { "@type": "Organization", name: brand.name },
@@ -78,7 +82,7 @@ export default async function PostPage({ params }: Params) {
 
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdScript(jsonLd) }} />
       <article aria-labelledby="post-title">
         <header className="page-hero dark post-hero" data-nav="dark" data-snap="fit">
           <p className="br kicker">

@@ -2,9 +2,11 @@ import Link from "next/link";
 import { Picture } from "@/components/Picture";
 import { QuoteCta } from "@/components/QuoteCta";
 import { Reveal } from "@/components/Reveal";
-import { formatPostDate, posts } from "@/content/blog";
+import { formatPostDate, type Post } from "@/content/blog";
 import { SITE_URL, brand } from "@/content/site";
+import { getPosts } from "@/lib/cms/content";
 import { pageMeta } from "@/lib/meta";
+import { jsonLdScript } from "@/lib/json-ld";
 
 export const metadata = pageMeta({
   title: "Blog: private-label garment manufacturing, explained",
@@ -13,7 +15,7 @@ export const metadata = pageMeta({
   path: "/blog/",
 });
 
-const blogJsonLd = {
+const blogJsonLd = (posts: Post[]) => ({
   "@context": "https://schema.org",
   "@type": "Blog",
   name: `${brand.name} blog`,
@@ -24,12 +26,13 @@ const blogJsonLd = {
     datePublished: p.date,
     url: `${SITE_URL}/blog/${p.slug}/`,
   })),
-};
+});
 
-export default function BlogPage() {
+export default async function BlogPage() {
+  const posts = await getPosts();
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(blogJsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdScript(blogJsonLd(posts)) }} />
       <section className="page-hero dark" data-nav="dark" data-snap="fit" aria-labelledby="blog-title">
         <p className="br kicker">Blog</p>
         <h1 id="blog-title" className="h-page" style={{ marginTop: 18 }}>

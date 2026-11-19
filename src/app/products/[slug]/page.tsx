@@ -1,33 +1,35 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ProductDetails } from "@/components/product/ProductDetails";
-import { TurnStage } from "@/components/product/TurnStage";
+import { ProductStage } from "@/components/product/ProductGallery";
 import { BayContents, GarmentArt, Wardrobe, bayStyle } from "@/components/product/Wardrobe";
 import { QuoteCta } from "@/components/QuoteCta";
-import { getProduct, products } from "@/content/products";
 import { SITE_URL, brand } from "@/content/site";
+import { getProduct, getProducts } from "@/lib/cms/content";
 import { absoluteUrl } from "@/lib/media";
 import { pageMeta } from "@/lib/meta";
 import { slotImage } from "@/server/media";
+import { jsonLdScript } from "@/lib/json-ld";
 
 interface Params {
   params: Promise<{ slug: string }>;
 }
 
-export const dynamicParams = false;
+// Products added in the content studio get their page on first visit (and are then cached), without a redeploy.
+export const dynamicParams = true;
 
-export function generateStaticParams() {
-  return products.map((p) => ({ slug: p.slug }));
+export async function generateStaticParams() {
+  return (await getProducts()).map((p) => ({ slug: p.slug }));
 }
 
 export async function generateMetadata({ params }: Params) {
   const { slug } = await params;
-  const product = getProduct(slug);
+  const product = await getProduct(slug);
   if (!product) return {};
   const img = await slotImage(product.image);
   return pageMeta({
-    title: `${product.name} (${product.sub}): private-label manufacturing`,
-    description: `${product.description} MOQ ${product.moq}.`,
+    title: product.seoTitle ?? `${product.name} (${product.sub}): private-label manufacturing`,
+    description: product.seoDescription ?? `${product.description} MOQ ${product.moq}.`,
     path: `/products/${product.slug}/`,
     image: { url: img.src, width: img.width, height: img.height, alt: img.alt },
   });
@@ -35,22 +37,39 @@ export async function generateMetadata({ params }: Params) {
 
 export default async function ProductPage({ params }: Params) {
   const { slug } = await params;
-  const product = getProduct(slug);
+  const product = await getProduct(slug);
   if (!product) notFound();
-  const related = products.filter((p) => p.category === product.category && p.slug !== product.slug).slice(0, 4);
+  const related = (await getProducts()).filter((p) => p.category === product.category && p.slug !== product.slug).slice(0, 4);
+  // Prices are on request (B2B), so this is described as an item page with breadcrumbs rather than a schema.org Product:
+  // Google requires a price, review or rating on Product, and would list every product page as an error otherwise.
+  const url = `${SITE_URL}/products/${product.slug}/`;
   const jsonLd = {
     "@context": "https://schema.org",
-    "@type": "Product",
-    name: product.name,
-    description: product.description,
-    category: product.category,
-    image: absoluteUrl((await slotImage(product.image)).src, SITE_URL),
-    manufacturer: { "@type": "Organization", name: brand.name },
+    "@graph": [
+      {
+        "@type": "ItemPage",
+        "@id": url,
+        url,
+        name: product.name,
+        description: product.description,
+        primaryImageOfPage: absoluteUrl((await slotImage(product.image)).src, SITE_URL),
+        about: { "@type": "Thing", name: `${product.name}, ${product.category.toLowerCase()} made to order` },
+        publisher: { "@type": "Organization", name: brand.name, url: `${SITE_URL}/` },
+      },
+      {
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          { "@type": "ListItem", position: 1, name: "Home", item: `${SITE_URL}/` },
+          { "@type": "ListItem", position: 2, name: "Products", item: `${SITE_URL}/products/` },
+          { "@type": "ListItem", position: 3, name: product.name, item: url },
+        ],
+      },
+    ],
   };
 
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdScript(jsonLd) }} />
       <article className="pdp-page fit-bands" data-snap="fit" aria-labelledby="product-title">
         <div className="band band-ink band-head is-first" data-nav="dark">
           <Link className="pill" href="/products/">
@@ -62,11 +81,7 @@ export default async function ProductPage({ params }: Params) {
         </div>
         <div className="band band-paper band-main" data-nav="light">
           <div className="pdp">
-            <div className="pv-media">
-              <div className="pv-frame">
-                <TurnStage image={product.image} alt={`${product.name}, ${product.sub}`} priority />
-              </div>
-            </div>
+            <ProductStage product={product} />
             <ProductDetails product={product} headingId="product-title" headingLevel="h1" inBands />
           </div>
         </div>

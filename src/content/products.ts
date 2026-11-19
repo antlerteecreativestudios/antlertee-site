@@ -19,13 +19,21 @@ export interface Product {
   category: Category;
   /** Short spec shown under the name on the rack, e.g. "300 GSM". */
   sub: string;
+  /** The cover photo: on the rack and first on the product page. */
   image: ImageId;
+  /** More photos of the same product (added in the content studio), shown as thumbnails beside the cover. */
+  gallery?: { image: ImageId; alt?: string }[];
   description: string;
   specs: Spec[];
   finishes: string[];
   moq: string;
   /** Shown on the home page rack. */
   featured?: boolean;
+  /** Optional overrides for the search-result title and description (set in the content studio). */
+  seoTitle?: string;
+  seoDescription?: string;
+  /** ISO timestamp of the last edit in the content studio (sitemap lastmod). */
+  updatedAt?: string;
 }
 
 const moq = facts.moqLong;

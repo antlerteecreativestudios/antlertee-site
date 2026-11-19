@@ -1,32 +1,29 @@
-import { AdminHeader } from "@/components/admin/AdminHeader";
+import { FilesTabs } from "@/components/admin/FilesTabs";
+import { PageHead } from "@/components/admin/ui";
 import { SlotCard } from "@/components/admin/SlotCard";
 import type { ImageId } from "@/content/images";
 import { resolveImage } from "@/lib/media";
 import { requireAdminPage } from "@/server/auth/admin";
-import { statusCounts } from "@/server/leads";
 import { allSlots, listOverrides } from "@/server/media";
 import { slotUsage } from "@/server/slot-usage";
 
 export default async function SiteImagesPage() {
   const { csrf } = await requireAdminPage();
-  const [overrides, counts] = await Promise.all([listOverrides(), statusCounts()]);
+  const overrides = await listOverrides();
   const byId = new Map(overrides.map((o) => [o.slotId, o]));
   const usage = slotUsage();
   const slots = allSlots();
   const replaced = overrides.filter((o) => o.url).length;
 
   return (
-    <>
-      <AdminHeader csrf={csrf} active="images" unread={counts.new} />
-      <div className="adm-wrap">
-        <h1 className="adm-h1">
-          Site images<span className="dot">.</span>
-        </h1>
-        <p className="adm-sub">
+    <div className="a-page wide">
+      <PageHead title="Files" />
+      <FilesTabs current="site" />
+        <p className="a-sub">
           Every image on the site, {slots.length} in all ({replaced} replaced). Replace one with a JPG, PNG or WebP: it is cropped to the same
           shape, optimised, and goes live on the site within a few seconds. Reset brings back the original.
         </p>
-        <ul className="adm-grid" style={{ marginTop: 20 }}>
+        <ul className="adm-grid">
           {slots.map((s) => {
             const o = byId.get(s.id);
             const img = resolveImage(s.id as ImageId, o);
@@ -49,7 +46,6 @@ export default async function SiteImagesPage() {
             );
           })}
         </ul>
-      </div>
-    </>
+    </div>
   );
 }

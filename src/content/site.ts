@@ -6,9 +6,10 @@
  * Change a figure here and it updates everywhere on the site (home, products, process, FAQs, footer).
  */
 
-/** Public site URL, used for canonical links, Open Graph and the sitemap.
- * TODO confirm with client: domain not chosen yet (baseline study, question 6). Set NEXT_PUBLIC_SITE_URL at build time. */
-export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.example.com").replace(/\/$/, "");
+/** Public site URL, used for canonical links, Open Graph, the sitemap and llms.txt.
+ * Defaults to the live Vercel address. TODO confirm with client: custom domain not chosen yet (baseline study, question 6);
+ * when it is, set NEXT_PUBLIC_SITE_URL on Vercel and redeploy. */
+export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.antlerteecreativestudios.com").replace(/\/$/, "");
 
 export const brand = {
   name: "Antlertee Creative Studios",

@@ -95,6 +95,7 @@
     padding: 12px;
   }
   .nl-row input[type="email"] {
+    min-height: 44px;
     padding: 8px 10px;
     text-align: center;
   }

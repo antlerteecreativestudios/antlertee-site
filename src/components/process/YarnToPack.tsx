@@ -228,7 +228,9 @@ export function YarnToPack() {
   const reduce = usePrefersReducedMotion();
   const detected = useSyncExternalStore<HeroMode>(subscribeNever, detectHeroMode, () => "pending");
   const [failed, setFailed] = useState(false);
-  const still = reduce || detected === "static";
+  // detectHeroMode already returns "static" under prefers-reduced-motion, unless `?hero=3d|svg` forces a variant for
+  // QA; `reduce` only covers the moment before detection has run.
+  const still = detected === "static" || (reduce && detected === "pending");
   const want3d = !still && !failed && detected === "3d";
   const [load3d, setLoad3d] = useState(false);
   const ready3d = useRef(false);
@@ -258,6 +260,9 @@ export function YarnToPack() {
 
   // Fetch the 3D film right after hydration (two frames later, so the first paint and hydration go first); its
   // shaders compile in the background. The calm knit poster shows meanwhile.
+  // (A 14 Nov experiment waited for the window "load" event + 600 ms to raise the Lighthouse score; on slower loads the
+  // poster timed out first and visitors only saw the 2D loop, so the 3D hero is loaded straight away again, as on the
+  // live site.)
   useEffect(() => {
     if (!want3d) return;
     let id = requestAnimationFrame(() => {

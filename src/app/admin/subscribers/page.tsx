@@ -1,81 +1,87 @@
 import Link from "next/link";
-import { AdminHeader } from "@/components/admin/AdminHeader";
+import { Icon } from "@/components/admin/Icon";
 import { LocalTime } from "@/components/admin/LocalTime";
+import { one, PageHead, type Search } from "@/components/admin/ui";
 import { requireAdminPage } from "@/server/auth/admin";
-import { statusCounts } from "@/server/leads";
 import { listSubscribers } from "@/server/subscribers";
 
 const PAGE = 100;
 
-type Search = Promise<Record<string, string | string[] | undefined>>;
-
 export default async function SubscribersPage({ searchParams }: { searchParams: Search }) {
-  const { csrf } = await requireAdminPage();
-  const sp = await searchParams;
-  const raw = Array.isArray(sp.page) ? sp.page[0] : sp.page;
-  const page = Math.max(1, Number.parseInt(raw ?? "", 10) || 1);
-  const [{ subscribers, total }, counts] = await Promise.all([listSubscribers(PAGE, (page - 1) * PAGE), statusCounts()]);
+  await requireAdminPage();
+  const page = Math.max(1, Number.parseInt(one((await searchParams).page), 10) || 1);
+  const { subscribers, total } = await listSubscribers(PAGE, (page - 1) * PAGE);
   const pages = Math.max(1, Math.ceil(total / PAGE));
 
   return (
-    <>
-      <AdminHeader csrf={csrf} active="subscribers" unread={counts.new} />
-      <div className="adm-wrap">
-        <h1 className="adm-h1">
-          Subscribers<span className="dot">.</span>
-        </h1>
-        <p className="adm-sub">{total === 0 ? "No sign-ups yet." : `${total} in total.`} People who joined the newsletter from the site footer.</p>
-
-        <div className="adm-toolbar">
-          <a className="pill" href="/api/admin/subscribers/export/" download>
-            Export CSV
+    <div className="a-page wide">
+      <PageHead
+        title="Subscribers"
+        actions={
+          <a className="btn" href="/api/admin/subscribers/export/" download>
+            <Icon name="download" size={16} /> Export
           </a>
-        </div>
-
+        }
+      />
+      <p className="a-sub">People who joined the newsletter from the website footer. Export the list to send a campaign from your email tool.</p>
+      <section className="a-card flush" aria-label="Subscribers">
         {subscribers.length === 0 ? (
-          <p className="adm-empty">Nobody has signed up yet. New sign-ups from the footer appear here.</p>
+          <div className="a-empty">
+            <strong>No subscribers yet</strong>
+            <span>New sign-ups from the footer appear here.</span>
+          </div>
         ) : (
-          <ul className="adm-list">
-            {subscribers.map((s) => (
-              <li key={s.id}>
-                <div className="adm-lead">
-                  <span className="adm-kind">{s.status === "subscribed" ? "Subscribed" : "Unsubscribed"}</span>
-                  <span>
-                    <span className="adm-lead-name">{s.email}</span>
-                    {s.sourcePath ? (
-                      <>
-                        <br />
-                        <span className="adm-lead-meta">from {s.sourcePath}</span>
-                      </>
-                    ) : null}
-                  </span>
-                  <span className="adm-lead-time">
-                    <LocalTime iso={s.createdAt} />
-                  </span>
-                </div>
-              </li>
-            ))}
-          </ul>
+          <div className="a-table-wrap">
+            <table className="a-table">
+              <thead>
+                <tr>
+                  <th scope="col">Email</th>
+                  <th scope="col">Status</th>
+                  <th scope="col" className="hide-sm">
+                    Signed up on
+                  </th>
+                  <th scope="col" className="num">
+                    Date
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {subscribers.map((s) => (
+                  <tr key={s.id}>
+                    <td style={{ fontWeight: 600, overflowWrap: "anywhere" }}>{s.email}</td>
+                    <td>
+                      <span className="badge" data-tone={s.status === "subscribed" ? "good" : undefined}>
+                        {s.status === "subscribed" ? "Subscribed" : "Unsubscribed"}
+                      </span>
+                    </td>
+                    <td className="hide-sm a-meta">{s.sourcePath || "—"}</td>
+                    <td className="num a-meta">
+                      <LocalTime iso={s.createdAt} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
-
         {pages > 1 && (
-          <nav className="adm-pager" aria-label="Pages">
+          <nav className="a-pager" aria-label="Pages">
             {page > 1 && (
-              <Link className="pill" href={`/admin/subscribers/${page - 1 > 1 ? `?page=${page - 1}` : ""}`}>
-                ← Newer
+              <Link className="btn" href={`/admin/subscribers/${page - 1 > 1 ? `?page=${page - 1}` : ""}`}>
+                Newer
               </Link>
             )}
-            <span className="adm-sub" style={{ alignSelf: "center" }}>
+            <span className="a-sub">
               Page {page} of {pages}
             </span>
             {page < pages && (
-              <Link className="pill" href={`/admin/subscribers/?page=${page + 1}`}>
-                Older →
+              <Link className="btn" href={`/admin/subscribers/?page=${page + 1}`}>
+                Older
               </Link>
             )}
           </nav>
         )}
-      </div>
-    </>
+      </section>
+    </div>
   );
 }

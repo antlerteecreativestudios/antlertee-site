@@ -5,6 +5,7 @@ import { LeadFileDrop, useLeadFiles } from "@/components/uploads/LeadFiles";
 import { contact, facts, mailtoLink, whatsappLink } from "@/content/site";
 import { garmentTypes, techPackChecklist } from "@/content/techpack";
 import { submitLead } from "@/lib/leads/submit";
+import { useFormDraft } from "@/lib/use-form-draft";
 import { goToWhatsApp, openHandoffTab, saveForHandoff, whatsappMessage, type HandoffInfo } from "@/lib/leads/whatsapp";
 import { todayIso, validateContact, type Errors } from "./logic";
 
@@ -71,6 +72,8 @@ export function SendTechPack({ onBuild }: { onBuild: () => void }) {
   const [submitted, setSubmitted] = useState(false);
   const [emailHref, setEmailHref] = useState<string | null>(null);
   const [phase, setPhase] = useState<Phase>({ kind: "idle" });
+  // Typed answers survive leaving the page or switching between the builder and this form (files can't be kept).
+  const clearDraft = useFormDraft(formRef, "send-techpack", ORDER, { remount: phase.kind === "sent" });
   const files = useLeadFiles();
   const sending = phase.kind === "sending";
 
@@ -105,6 +108,7 @@ export function SendTechPack({ onBuild }: { onBuild: () => void }) {
     });
     const href = whatsappLink(whatsappMessage(compose(values).body, info));
     const opened = goToWhatsApp(tab, href);
+    if (info.reference) clearDraft();
     setPhase({ kind: "sent", info, href, opened });
     requestAnimationFrame(() => okRef.current?.focus());
   };

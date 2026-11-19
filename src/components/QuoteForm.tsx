@@ -3,9 +3,10 @@
 import { useSearchParams } from "next/navigation";
 import { useRef, useState, type FormEvent } from "react";
 import { LeadFileDrop, useLeadFiles } from "@/components/uploads/LeadFiles";
-import { getProduct, products } from "@/content/products";
+import type { Product } from "@/content/products";
 import { contact, facts, mailtoLink, whatsappLink } from "@/content/site";
 import { submitLead } from "@/lib/leads/submit";
+import { useFormDraft } from "@/lib/use-form-draft";
 import { goToWhatsApp, openHandoffTab, saveForHandoff, whatsappMessage, type HandoffInfo } from "@/lib/leads/whatsapp";
 
 type FieldName = "name" | "brand" | "email" | "whatsapp" | "product" | "quantity" | "deadline" | "message";
@@ -54,8 +55,8 @@ export function validate(v: Values): Errors {
   return e;
 }
 
-function compose(v: Values): { subject: string; body: string } {
-  const product = getProduct(v.product);
+function compose(v: Values, products: Product[]): { subject: string; body: string } {
+  const product = products.find((p) => p.slug === v.product);
   const details: [string, string][] = [
     ["Name", v.name.trim()],
     ["Brand", v.brand.trim()],
@@ -81,9 +82,10 @@ function compose(v: Values): { subject: string; body: string } {
  * chat with the details already typed; the visitor only presses send. The mail app, with the details filled in,
  * is the alternative.
  */
-export function QuoteForm() {
+/** `products` is the live list (from the content studio), passed in by the contact page. */
+export function QuoteForm({ products }: { products: Product[] }) {
   const params = useSearchParams();
-  const preset = getProduct(params.get("product") ?? "");
+  const preset = products.find((p) => p.slug === params.get("product"));
   const formRef = useRef<HTMLFormElement>(null);
   const summaryRef = useRef<HTMLDivElement>(null);
   const okRef = useRef<HTMLDivElement>(null);
@@ -91,6 +93,8 @@ export function QuoteForm() {
   const [submitted, setSubmitted] = useState(false);
   const [emailHref, setEmailHref] = useState<string | null>(null);
   const [phase, setPhase] = useState<Phase>({ kind: "idle" });
+  // Typed answers survive leaving the page or switching between the builder and this form (files can't be kept).
+  const clearDraft = useFormDraft(formRef, "quote", ORDER, { skip: preset ? ["product", "message"] : [], remount: phase.kind === "sent" });
   const files = useLeadFiles();
   const sending = phase.kind === "sending";
 
@@ -103,7 +107,7 @@ export function QuoteForm() {
     // Open the tab now (inside the click), then point it at WhatsApp once the request is saved.
     const tab = openHandoffTab();
     setPhase({ kind: "sending" });
-    const product = getProduct(v.product);
+    const product = products.find((p) => p.slug === v.product);
     const fields: Record<string, string> = { product: product ? `${product.name} (${product.sub})` : "Not sure yet / something else" };
     if (v.quantity) fields.quantity = v.quantity;
     if (v.deadline) fields.deadline = v.deadline;
@@ -123,8 +127,9 @@ export function QuoteForm() {
           website: honeypot,
         }),
     });
-    const href = whatsappLink(whatsappMessage(compose(v).body, info));
+    const href = whatsappLink(whatsappMessage(compose(v, products).body, info));
     const opened = goToWhatsApp(tab, href);
+    if (info.reference) clearDraft();
     setPhase({ kind: "sent", info, href, opened });
     requestAnimationFrame(() => okRef.current?.focus());
   };
@@ -152,7 +157,7 @@ export function QuoteForm() {
       return;
     }
     if (choice === "email") {
-      const href = mailtoLink(compose(values).subject, compose(values).body);
+      const href = mailtoLink(compose(values, products).subject, compose(values, products).body);
       setEmailHref(href);
       window.location.href = href;
       return;

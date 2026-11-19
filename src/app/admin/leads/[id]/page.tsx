@@ -1,11 +1,12 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { AdminHeader } from "@/components/admin/AdminHeader";
-import { LeadActions } from "@/components/admin/LeadActions";
+import { Icon } from "@/components/admin/Icon";
+import { LeadControls } from "@/components/admin/LeadControls";
+import { LeadTimeline } from "@/components/admin/LeadTimeline";
 import { LocalTime } from "@/components/admin/LocalTime";
+import { KindBadge, PageHead, StageBadge } from "@/components/admin/ui";
 import { formatBytes, leadReference } from "@/lib/leads/rules";
 import { requireAdminPage } from "@/server/auth/admin";
-import { getLead, statusCounts } from "@/server/leads";
+import { getLead, listLeadEvents } from "@/server/leads";
 
 const FIELD_LABELS: Record<string, string> = { product: "Product", quantity: "Quantity (pcs)", deadline: "Deadline" };
 const VIEWABLE = new Set(["application/pdf", "image/png", "image/jpeg", "image/webp"]);
@@ -13,113 +14,87 @@ const VIEWABLE = new Set(["application/pdf", "image/png", "image/jpeg", "image/w
 export default async function LeadPage({ params }: { params: Promise<{ id: string }> }) {
   const { csrf } = await requireAdminPage();
   const { id } = await params;
-  const [found, counts] = await Promise.all([getLead(id), statusCounts()]);
+  const [found, events] = await Promise.all([getLead(id), listLeadEvents(id)]);
   if (!found) notFound();
   const { lead, files } = found;
-  const fields = Object.entries(lead.payload.fields ?? {});
-  const rows: [string, React.ReactNode][] = [
-    ["Reference", leadReference(lead.id)],
-    ["Received", <LocalTime key="t" iso={lead.createdAt} />],
-    ["Type", lead.kind === "techpack" ? "Tech pack" : "Quote request"],
-    ["Name", lead.name],
-    ["Brand", lead.brand],
-    ["Email", lead.email ? <a key="e" href={`mailto:${lead.email}`}>{lead.email}</a> : ""],
-    [
-      "WhatsApp",
-      lead.whatsapp ? (
-        <a key="w" href={`https://wa.me/${lead.whatsapp.replace(/[^\d]/g, "")}`} target="_blank" rel="noopener noreferrer">
-          {lead.whatsapp}
-        </a>
-      ) : (
-        ""
-      ),
-    ],
-    ["Country / market", lead.country],
-    ...fields.map(([k, v]): [string, React.ReactNode] => [FIELD_LABELS[k] ?? k, v]),
-    ["Sent from", lead.sourcePath],
-  ];
+  const back = lead.kind === "techpack" ? "/admin/tech-packs/" : "/admin/leads/";
+  const fields = Object.entries(lead.payload.fields ?? {}).filter(([, v]) => v);
+  const wa = lead.whatsapp.replace(/[^\d]/g, "");
 
   return (
-    <>
-      <AdminHeader csrf={csrf} active="leads" unread={counts.new} />
-      <div className="adm-wrap">
-        <Link className="adm-back" href="/admin/leads/">
-          ← All leads
-        </Link>
-        <h1 className="adm-h1">
-          {lead.name}
-          <span className="dot">.</span>
-        </h1>
-        <p className="adm-sub">
-          {lead.kind === "techpack" ? "Tech pack" : "Quote request"} · {leadReference(lead.id)} · status: <strong>{lead.status}</strong>
-        </p>
-
-        <LeadActions id={lead.id} status={lead.status} csrf={csrf} />
-
-        <div className="adm-detail">
-          <div style={{ display: "grid", gap: 18 }}>
-            <section className="adm-card" aria-labelledby="sec-details">
-              <h2 className="adm-h2" id="sec-details">
-                Details
-              </h2>
-              <dl className="adm-dl">
-                {rows
-                  .filter(([, v]) => v !== "" && v !== null && v !== undefined)
-                  .map(([k, v]) => (
-                    <div key={k} style={{ display: "contents" }}>
-                      <dt>{k}</dt>
-                      <dd>{v}</dd>
-                    </div>
-                  ))}
-              </dl>
-            </section>
-
-            {lead.message && (
-              <section className="adm-card" aria-labelledby="sec-msg">
-                <h2 className="adm-h2" id="sec-msg">
-                  Message
-                </h2>
-                <p className="adm-pre">{lead.message}</p>
-              </section>
-            )}
-
-            {lead.payload.summary && (
-              <section className="adm-card" aria-labelledby="sec-tp">
-                <h2 className="adm-h2" id="sec-tp">
-                  Tech pack (built on the site)
-                </h2>
-                <p className="adm-pre">{lead.payload.summary}</p>
-              </section>
-            )}
-          </div>
-
-          <section className="adm-card" aria-labelledby="sec-files">
-            <h2 className="adm-h2" id="sec-files">
-              Files ({files.length})
-            </h2>
-            {files.length === 0 ? (
-              <p className="adm-sub">No files were uploaded with this lead.</p>
+    <div className="a-page wide">
+      <PageHead
+        title={`${leadReference(lead.id)} · ${lead.name}`}
+        back={back}
+        badges={
+          <>
+            <KindBadge kind={lead.kind} />
+            {lead.status === "spam" ? (
+              <span className="badge" data-tone="bad">
+                Spam
+              </span>
             ) : (
-              <ul className="adm-files">
+              <StageBadge stage={lead.stage} />
+            )}
+            {lead.status === "done" && <span className="badge">Archived</span>}
+          </>
+        }
+      />
+      <p className="a-sub" style={{ marginTop: -8 }}>
+        Received <LocalTime iso={lead.createdAt} />
+        {lead.sourcePath ? ` from ${lead.sourcePath}` : ""}
+      </p>
+
+      <div className="a-cols">
+        <div className="a-stack">
+          <section className="a-card" aria-labelledby="h-req">
+            <h2 id="h-req">{lead.kind === "techpack" ? "Request" : "Quote request"}</h2>
+            {fields.length > 0 && (
+              <dl className="a-dl" style={{ marginBottom: lead.message ? 12 : 0 }}>
+                {fields.map(([k, v]) => (
+                  <div key={k} style={{ display: "contents" }}>
+                    <dt>{FIELD_LABELS[k] ?? k}</dt>
+                    <dd>{v}</dd>
+                  </div>
+                ))}
+              </dl>
+            )}
+            {lead.message ? <p className="a-pre">{lead.message}</p> : fields.length === 0 && <p className="a-sub">No message.</p>}
+          </section>
+
+          {lead.payload.summary && (
+            <section className="a-card" aria-labelledby="h-tp">
+              <h2 id="h-tp">Tech pack built on the website</h2>
+              <p className="a-pre">{lead.payload.summary}</p>
+            </section>
+          )}
+
+          <section className="a-card" aria-labelledby="h-files">
+            <h2 id="h-files">Files ({files.length})</h2>
+            {files.length === 0 ? (
+              <p className="a-sub">No files were sent with this lead.</p>
+            ) : (
+              <ul className="a-files">
                 {files.map((f) => {
                   const base = `/api/admin/leads/${lead.id}/files/${f.id}/`;
                   return (
-                    <li key={f.id} className="adm-file">
-                      <span className="adm-file-name">
+                    <li key={f.id} className="a-file">
+                      <Icon name="file" />
+                      <span className="a-file-name">
                         {f.originalName}
-                        <br />
-                        <span className="adm-sub" style={{ fontWeight: 400, fontSize: 13 }}>
-                          {formatBytes(f.size)} · {f.mime}
+                        <span className="a-meta" style={{ display: "block", fontWeight: 400 }}>
+                          {formatBytes(f.size)}
                         </span>
                       </span>
-                      <span className="adm-actions">
+                      <span className="a-media-tools">
                         {VIEWABLE.has(f.mime) && (
-                          <a className="pill" href={`${base}?view=1`} target="_blank" rel="noopener noreferrer">
+                          <a className="btn" href={`${base}?view=1`} target="_blank" rel="noopener noreferrer">
                             View<span className="sr-only"> {f.originalName}</span>
                           </a>
                         )}
-                        <a className="pill" href={base} download>
-                          Download<span className="sr-only"> {f.originalName}</span>
+                        <a className="btn" href={base} download>
+                          <Icon name="download" size={16} />
+                          <span className="sr-only">Download {f.originalName}</span>
                         </a>
                       </span>
                     </li>
@@ -127,14 +102,40 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
                 })}
               </ul>
             )}
-            {lead.userAgent && (
-              <p className="adm-sub" style={{ marginTop: 14, fontSize: 12 }}>
-                Browser: {lead.userAgent}
-              </p>
-            )}
           </section>
+
+          <LeadTimeline id={lead.id} csrf={csrf} events={events} receivedAt={lead.createdAt} />
+        </div>
+
+        <div className="a-stack">
+          <LeadControls id={lead.id} stage={lead.stage} status={lead.status} csrf={csrf} back={back} />
+          <section className="a-card" aria-labelledby="h-cust">
+            <h2 id="h-cust">Customer</h2>
+            <div style={{ display: "grid", gap: 6 }}>
+              <strong>{lead.name}</strong>
+              {lead.brand && <span>{lead.brand}</span>}
+              {lead.country && <span className="a-sub">{lead.country}</span>}
+            </div>
+            <div style={{ display: "grid", gap: 8, marginTop: 14 }}>
+              {lead.email && (
+                <a className="btn" href={`mailto:${lead.email}?subject=${encodeURIComponent(`Your Antlertee request ${leadReference(lead.id)}`)}`}>
+                  <Icon name="mail" size={16} /> {lead.email}
+                </a>
+              )}
+              {wa && (
+                <a className="btn" href={`https://wa.me/${wa}`} target="_blank" rel="noopener noreferrer">
+                  <Icon name="whatsapp" size={16} /> {lead.whatsapp}
+                </a>
+              )}
+            </div>
+          </section>
+          {lead.userAgent && (
+            <p className="a-small" style={{ overflowWrap: "anywhere" }}>
+              Browser: {lead.userAgent}
+            </p>
+          )}
         </div>
       </div>
-    </>
+    </div>
   );
 }

@@ -35,6 +35,10 @@ export async function listSubscribers(limit: number, offset: number): Promise<{ 
   return { subscribers: rows.map(toSubscriber), total: num(count[0]?.n) };
 }
 
+export async function countSubscribers(): Promise<number> {
+  return num((await query("SELECT count(*) AS n FROM subscribers WHERE status = 'subscribed'"))[0]?.n);
+}
+
 export async function allSubscribersForExport(): Promise<Subscriber[]> {
   return (await query("SELECT * FROM subscribers ORDER BY created_at DESC")).map(toSubscriber);
 }

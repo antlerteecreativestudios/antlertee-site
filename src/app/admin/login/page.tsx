@@ -11,7 +11,7 @@ export default async function LoginPage() {
   let devDefaults = false;
   try {
     devDefaults = authConfig().devDefaults;
-    if (await currentAdmin()) redirect("/admin/leads/");
+    if (await currentAdmin()) redirect("/admin/");
   } catch (err) {
     if (err instanceof ConfigError) configError = true;
     else throw err;

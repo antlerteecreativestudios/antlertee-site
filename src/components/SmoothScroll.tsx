@@ -22,6 +22,10 @@ export function SmoothScroll() {
     soft?.attach(lenis);
     softStop.current = soft;
     setLenis(lenis);
+    // Development only: lets the scroll test rig drive Lenis on a virtual clock (removed from production builds).
+    if (process.env.NODE_ENV !== "production") {
+      Object.assign(window, { __scrollRig: { Lenis, createSoftStop, app: lenis } });
+    }
     return () => {
       soft?.destroy();
       softStop.current = null;

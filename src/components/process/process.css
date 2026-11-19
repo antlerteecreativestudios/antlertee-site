@@ -394,8 +394,17 @@
     justify-content: flex-start;
     padding-bottom: 20px;
   }
+  /* Two rows only: the hidden phase list (below) and the <noscript> poster style (a grid item of its own) added an empty
+     third row whose gap pushed the hero 12px past the screen. The <style> inside still applies with its parent hidden. */
   .home-hero .pr-hero-in {
+    grid-template-areas:
+      "copy"
+      "stage";
+    grid-template-rows: auto auto;
     row-gap: 12px;
+  }
+  .home-hero .pr-hero-in > noscript {
+    display: none;
   }
   .home-title {
     font-size: 15.5vw;
@@ -423,6 +432,12 @@
 @media (max-width: 859.98px) and (max-height: 720px) {
   .home-hero .pr-lead {
     display: none;
+  }
+  /* Short phones (360x640, 375x667): without the lead the stage has more room, but the 240px floor still pushed the
+     hero about 70px past the first screen; size it from the height that is left instead. */
+  .home-hero .pr-fig {
+    width: min(100%, calc((100svh - 470px) * 1.04));
+    min-width: 170px;
   }
 }
 

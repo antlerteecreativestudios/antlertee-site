@@ -7,7 +7,7 @@ import generated from "@/content/images.generated.json";
 import { extensionOf, sanitizeFilename } from "@/lib/leads/rules";
 import type { ImageId } from "@/content/images";
 import { resolveImage, type ImageVariant, type MediaOverride, type MediaOverrides, type ResolvedImage } from "@/lib/media";
-import { ConfigError, isBuildPhase } from "./config";
+import { ConfigError } from "./config";
 import { iso, json, num, query, str, type Row } from "./db";
 import { getStorage, readBuffer } from "./storage";
 
@@ -84,32 +84,33 @@ export async function listOverrides(): Promise<OverrideRecord[]> {
 }
 
 async function readOverrides(): Promise<MediaOverrides> {
+  const out: MediaOverrides = {};
   try {
-    const out: MediaOverrides = {};
     for (const o of await listOverrides()) {
       out[o.slotId] = { url: o.url, width: o.width, height: o.height, alt: o.alt, variants: o.variants, updatedAt: o.updatedAt };
     }
-    return out;
   } catch (err) {
-    // Building without a database (e.g. `npm run check` on a laptop): pages are built with the original images.
-    // At runtime in production a missing DATABASE_URL still fails loudly.
-    if (isBuildPhase && err instanceof ConfigError) {
-      if (!globalThis.__acsWarnedNoDb) {
-        console.warn("[media] DATABASE_URL is not set: building pages with the original images (no admin replacements).");
-        globalThis.__acsWarnedNoDb = true;
-      }
-      return {};
+    // Public pages must never depend on the database: they re-read this every minute, and a missing or briefly
+    // unreachable database would otherwise turn the whole site into a 500. They fall back to the original images;
+    // the admin pages still fail loudly on their own.
+    if (!globalThis.__acsWarnedNoDb) {
+      console.warn(
+        err instanceof ConfigError
+          ? "[media] DATABASE_URL is not set: pages use the original images (no admin replacements)."
+          : "[media] could not read admin image replacements: pages use the original images.",
+      );
+      globalThis.__acsWarnedNoDb = true;
     }
-    throw err;
   }
+  return out;
 }
 
 declare global {
   var __acsWarnedNoDb: boolean | undefined;
 }
 
-/** One cached read shared by every page; invalidated by revalidateMedia() after an admin change. */
-export const getMediaOverrides = unstable_cache(readOverrides, ["media-overrides-v1"], { tags: [MEDIA_TAG] });
+/** One cached read shared by every page; invalidated by revalidateMedia() after an admin change, and re-read at least every five minutes. */
+export const getMediaOverrides = unstable_cache(readOverrides, ["media-overrides-v3"], { tags: [MEDIA_TAG], revalidate: 300 });
 
 /** A slot's current image (replacement or built-in) for server-side use such as Open Graph tags. */
 export async function slotImage(id: ImageId): Promise<ResolvedImage> {

@@ -19,6 +19,11 @@ export interface Post {
   tag: string;
   image: ImageId;
   body: Block[];
+  /** Optional overrides for the search-result title and description (set in the content studio). */
+  seoTitle?: string;
+  seoDescription?: string;
+  /** ISO timestamp of the last edit in the content studio (sitemap lastmod). */
+  updatedAt?: string;
 }
 
 /**
@@ -27,6 +32,103 @@ export interface Post {
  * from `facts` (src/content/site.ts), which carries the "confirm with client" notes. Swap or add posts here.
  */
 export const posts: Post[] = [
+  {
+    slug: "free-tech-pack-template-clothing",
+    title: "Free tech pack template for clothing: the 8 sections and how to fill them",
+    summary: "A clothing tech pack has eight sections. Here is what goes in each one, and how to build yours in about three minutes with our free tech pack builder.",
+    date: "2026-11-14",
+    readMinutes: 6,
+    tag: "Tech pack",
+    image: "factory-own-label",
+    body: [
+      {
+        type: "p",
+        text: "A clothing tech pack template is a fixed set of sections that describe a garment well enough for a factory to quote it, sample it and make it. Ours has eight: garment, fit, fabric, colours, artwork, sizes, labels and a final review. You can fill them in on paper or build them online in about three minutes.",
+      },
+      { type: "h2", text: "What is a tech pack?" },
+      {
+        type: "p",
+        text: "A tech pack is the written specification of one garment. Without it, a factory has to guess your fit, fabric weight and print placement, and the first sample comes back wrong. With it, the sample is close to the piece you pictured and you save at least one round of changes.",
+      },
+      { type: "h2", text: "The 8 sections of a clothing tech pack" },
+      {
+        type: "ul",
+        items: [
+          "Garment: the type (tee, hoodie, sweatshirt, jacket, trousers, shorts, jersey) and a flat sketch or reference photo.",
+          "Fit: regular, oversized, boxy or cropped. A garment you already own and like is the best reference.",
+          "Fabric: the fabric type (jersey, french terry, fleece, denim, canvas or technical), the weight in GSM and any wash such as acid, mineral or enzyme.",
+          "Colours: the main colour and any other colourways. A Pantone code or a physical swatch beats a screen photo.",
+          "Artwork: where each logo or print goes, and the technique: screen print, puff print, DTF or embroidery.",
+          "Sizes: a rough quantity split across sizes. It can change after sampling.",
+          "Labels: woven label, care label, hang tags and how it is packed.",
+          "Review: a plain read-back of everything, so nothing is left to assumption.",
+        ],
+      },
+      { type: "h2", text: "How to fill it in without a designer" },
+      {
+        type: "p",
+        text: "Start with the sections you are sure about, usually the garment and the artwork. Leave the rest as not sure. A good manufacturer will suggest a fabric, weight and fit when they reply, and you approve or change it at sample stage, when changes are cheap.",
+      },
+      { type: "h2", text: "Build it online instead" },
+      {
+        type: "p",
+        text: "Our free tech pack builder walks through these same eight sections in plain English. It needs no account, saves your draft in your own browser and ends with a printable A4 sheet and a ready-written message to us. You can start from a popular style and skip anything you are unsure of.",
+      },
+      {
+        type: "note",
+        text: `Ready to try it? Open the tech pack builder from the Process page, or message us on WhatsApp. Minimum order is ${facts.moqLong}, and samples are available before bulk.`,
+      },
+    ],
+  },
+  {
+    slug: "what-is-moq-clothing-manufacturing",
+    title: "What is MOQ in clothing manufacturing, and how to start with a small order",
+    summary: "MOQ is the smallest order a factory will make. Here is why it exists, what moves it, and how a new brand can start small.",
+    date: "2026-11-14",
+    readMinutes: 5,
+    tag: "Starting out",
+    image: "factory-colours",
+    body: [
+      {
+        type: "p",
+        text: "MOQ stands for minimum order quantity: the smallest number of pieces a factory will produce for one order. In clothing it is usually counted per design and per colour, because each one needs its own cutting, setup and checks before a single piece is sewn.",
+      },
+      { type: "h2", text: "Why factories have a MOQ" },
+      {
+        type: "p",
+        text: "Every run has fixed work that costs the same for 20 pieces or 2,000: preparing the pattern, cutting the fabric, setting up the print screens or embroidery file and running quality checks. A minimum spreads that fixed work across enough pieces to keep the price per piece fair.",
+      },
+      { type: "h2", text: "What changes the MOQ" },
+      {
+        type: "ul",
+        items: [
+          "Fabric: a fabric the factory already holds usually allows a lower minimum than one made or dyed to order.",
+          "Colours: each extra colourway of the same design is its own run.",
+          "Decoration: a print or embroidery setup adds fixed work, so complex pieces tend to need more pieces.",
+          "Finish: washes and special treatments are done in batches.",
+        ],
+      },
+      { type: "h2", text: "How a new brand can start small" },
+      {
+        type: "ul",
+        items: [
+          "Order a sample first. Approve fit, weight, print and finish before any bulk is cut.",
+          "Start with one or two designs in one or two colours rather than a full range.",
+          "Choose a base the factory already makes, then add your print, embroidery or label to it.",
+          "Use a complete tech pack, so the first run is right and you do not pay for corrections.",
+        ],
+      },
+      { type: "h2", text: "Our minimums" },
+      {
+        type: "p",
+        text: `Our standard minimum is ${facts.moqLong}. The heat-reactive puffer is the exception, at ${facts.moqPuffer}. We also work from print-on-demand through to bulk, so you can start small and scale with the same team.`,
+      },
+      {
+        type: "note",
+        text: "Not sure what your first order should be? Build a tech pack on the Process page, or message us on WhatsApp with the piece you have in mind.",
+      },
+    ],
+  },
   {
     slug: "what-goes-in-a-tech-pack",
     title: "What goes in a tech pack (and what you can leave to us)",

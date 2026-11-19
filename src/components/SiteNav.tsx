@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { nav } from "@/content/site";
 import { useDialog } from "@/lib/use-dialog";
+import { SocialLinks } from "./SocialLinks";
 
 /** "yellow" is the light theme over the yellow quote CTA, where the yellow "Get a quote" pill would vanish. */
 type Theme = "dark" | "light" | "yellow";
@@ -110,6 +111,8 @@ export function SiteNav() {
             role="dialog"
             aria-modal="true"
             aria-label="Menu"
+            // Lenis is stopped while the menu is open and would swallow touch scrolling inside it (landscape phones).
+            data-lenis-prevent
             initial={{ clipPath: "inset(0 0 100% 0)" }}
             animate={{ clipPath: "inset(0 0 0% 0)" }}
             exit={{ clipPath: "inset(0 0 100% 0)" }}
@@ -144,9 +147,12 @@ export function SiteNav() {
                 ))}
               </ul>
             </nav>
-            <p className="br" style={{ color: "var(--mute-inv)" }}>
-              Karachi, Pakistan
-            </p>
+            <div className="menu-foot">
+              <SocialLinks className="ft-social menu-social" />
+              <p className="br" style={{ color: "var(--mute-inv)" }}>
+                Karachi, Pakistan
+              </p>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

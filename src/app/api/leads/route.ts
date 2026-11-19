@@ -2,7 +2,8 @@ import type { NextRequest } from "next/server";
 import { composeTechPack, sanitize } from "@/components/techpack/logic";
 import { checkFile, checkSelection, leadReference, validateLead, type LeadFileRef } from "@/lib/leads/rules";
 import { clientKey, json, jsonError, readJson, sameOrigin, serverError, truncate } from "@/server/http";
-import { createLead, type LeadPayload } from "@/server/leads";
+import { fileLinkUrl } from "@/server/file-links";
+import { createLead, getLead, type LeadPayload } from "@/server/leads";
 import { hitRate } from "@/server/ratelimit";
 import { getStorage } from "@/server/storage";
 
@@ -49,7 +50,17 @@ export async function POST(req: NextRequest) {
     }
 
     const id = await createLead(input, payload, files, { ipHash, userAgent: truncate(req.headers.get("user-agent"), 300) });
-    return json({ id, reference: leadReference(id) }, 201);
+    // One private link per saved file, for the WhatsApp message (the team opens them from the chat).
+    // The lead is already saved: if the links can't be made, reply without them rather than an error (a retry would
+    // create a duplicate lead).
+    let links: { name: string; url: string }[] = [];
+    try {
+      const saved = files.length ? ((await getLead(id))?.files ?? []) : [];
+      links = saved.map((f) => ({ name: f.originalName, url: fileLinkUrl(req.nextUrl.origin, id, f.id) }));
+    } catch {
+      console.error("[leads] lead saved, but its file links could not be made");
+    }
+    return json({ id, reference: leadReference(id), files: links }, 201);
   } catch (err) {
     return serverError("leads", err);
   }

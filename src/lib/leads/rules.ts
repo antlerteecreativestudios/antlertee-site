@@ -289,6 +289,22 @@ export const LEAD_STATUSES = ["new", "read", "done", "spam"] as const;
 export type LeadStatus = (typeof LEAD_STATUSES)[number];
 export const isLeadStatus = (v: unknown): v is LeadStatus => typeof v === "string" && (LEAD_STATUSES as readonly string[]).includes(v);
 
+/* ---------- sales pipeline (the B2B version of Shopify's order status) ---------- */
+
+export const LEAD_STAGES = ["new", "contacted", "quoted", "sampling", "production", "delivered", "lost"] as const;
+export type LeadStage = (typeof LEAD_STAGES)[number];
+export const isLeadStage = (v: unknown): v is LeadStage => typeof v === "string" && (LEAD_STAGES as readonly string[]).includes(v);
+export const STAGE_LABELS: Record<LeadStage, string> = {
+  new: "New",
+  contacted: "Contacted",
+  quoted: "Quoted",
+  sampling: "Sampling",
+  production: "In production",
+  delivered: "Delivered",
+  lost: "Lost",
+};
+export const MAX_NOTE = 4000;
+
 /** Short human reference shown to the customer and in the inbox, e.g. "ACS-3F9A21". */
 export function leadReference(id: string): string {
   return `ACS-${id.replace(/-/g, "").slice(0, 6).toUpperCase()}`;

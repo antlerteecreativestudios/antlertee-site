@@ -19,7 +19,7 @@ export function HomeHero() {
           <p className="pr-lead">{hero.lede}</p>
           <div className="pr-ctas">
             <Link className="pill solid lg" href="/process/#tech-pack">
-              Start my collection
+              Start your drop
             </Link>
             <Link className="pill on-dark lg" href="/products/">
               Peek inside the rack

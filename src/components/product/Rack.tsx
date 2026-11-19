@@ -6,7 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Picture } from "@/components/Picture";
 import type { ImageId } from "@/content/images";
-import { categories, products as allProducts, type Category, type Product } from "@/content/products";
+import { categories, type Category, type Product } from "@/content/products";
 import { usePrefersReducedMotion } from "@/lib/use-media";
 import { ProductView } from "./ProductView";
 import { BayContents, GARMENT_SPRING, GarmentArt, HANGER_SIZES, Wardrobe, bayStyle } from "./Wardrobe";
@@ -34,6 +34,8 @@ interface Group {
 
 interface RackProps {
   products: Product[];
+  /** How many products the whole rack holds (the home rack shows only the featured ones). */
+  totalCount: number;
   /** The page this rack lives on, restored when the product view closes. */
   basePath: "/" | "/products/";
   /** Full wardrobe: one compartment per category, with the category tabs on the cornice. */
@@ -52,7 +54,7 @@ interface RackProps {
  * The return trip flies a fixed-position copy (portalled to <body>) instead of the hanger card itself, because
  * the card sits inside a horizontally scrolling rail that would clip it mid-flight.
  */
-export function Rack({ products, basePath, showFilters = false, title, intro, titleAs = "h2" }: RackProps) {
+export function Rack({ products, totalCount, basePath, showFilters = false, title, intro, titleAs = "h2" }: RackProps) {
   const reduce = usePrefersReducedMotion();
   const [filter, setFilter] = useState<Category | "All">("All");
   const sectionRef = useRef<HTMLElement>(null);
@@ -283,7 +285,7 @@ export function Rack({ products, basePath, showFilters = false, title, intro, ti
         {!showFilters && (
           <div className="band band-yellow band-foot rack-more" data-nav="yellow">
             <p className="br">
-              {allProducts.length} bases across {categories.length} categories
+              {totalCount} bases across {categories.length} categories
             </p>
             <Link className="pill inked lg" href="/products/">
               Show me everything

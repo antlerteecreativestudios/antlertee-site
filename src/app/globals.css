@@ -481,6 +481,9 @@ html.seen .loader {
   display: flex;
   flex-direction: column;
   padding: 18px var(--pad) 32px;
+  /* Landscape phones: the links are taller than the screen, so the menu scrolls (SiteNav marks it data-lenis-prevent). */
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 .menu-top {
   display: flex;
@@ -495,7 +498,8 @@ html.seen .loader {
   gap: 6px;
 }
 .menu ul a {
-  font: 900 clamp(48px, 15vw, 96px) / 0.95 var(--font-display);
+  /* The svh term only bites on short landscape screens, where the 48px+ links could not fit. */
+  font: 900 clamp(32px, min(15vw, 10svh), 96px) / 0.95 var(--font-display);
   letter-spacing: var(--track);
   text-decoration: none;
 }
@@ -506,6 +510,43 @@ html.seen .loader {
 .menu ul a .dot {
   opacity: 0;
   transition: opacity 0.2s;
+}
+/* Social icons at the foot of the menu (same round icons as the footer). */
+.menu .menu-foot {
+  margin-top: auto;
+  padding-top: 24px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px 24px;
+}
+.menu .menu-social {
+  display: flex;
+  gap: 10px;
+  margin: 0;
+}
+.menu .menu-social a {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--line-inv);
+  border-radius: 50%;
+  color: var(--paper);
+  font-size: 0;
+  line-height: 0;
+  letter-spacing: 0;
+  transition:
+    background 0.2s,
+    color 0.2s,
+    border-color 0.2s;
+}
+.menu .menu-social a:hover,
+.menu .menu-social a:focus-visible {
+  background: var(--yellow);
+  border-color: var(--yellow);
+  color: var(--ink);
 }
 
 /* ---------- hero ---------- */
@@ -946,18 +987,6 @@ html.seen .loader {
   line-height: 1.45;
   color: #cfc9c0;
 }
-.work[data-mode="scroll"] .track-wrap {
-  overflow-x: auto;
-  scroll-snap-type: x mandatory;
-  scroll-padding-inline: var(--pad);
-  overscroll-behavior-x: contain;
-  scrollbar-width: thin;
-  scrollbar-color: var(--yellow) transparent;
-  padding-bottom: 14px;
-}
-.work[data-mode="scroll"] .card {
-  scroll-snap-align: start;
-}
 .track-wrap:focus-visible {
   outline-offset: -4px;
 }
@@ -966,8 +995,25 @@ html.seen .loader {
   padding: 0 var(--pad);
   color: var(--mute-inv);
 }
-.work[data-mode="scroll"] .swipe-hint {
-  display: block;
+/* Swipe mode: reduced motion and landscape phones (the same query as SCROLL_QUERY in WorkGallery.tsx); everyone else
+   gets the pinned row. */
+@media (prefers-reduced-motion: reduce), (max-height: 519.98px) {
+  .work .track-wrap {
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: x mandatory;
+    scroll-padding-inline: var(--pad);
+    overscroll-behavior-x: contain;
+    scrollbar-width: thin;
+    scrollbar-color: var(--yellow) transparent;
+    padding-bottom: 14px;
+  }
+  .work .card {
+    scroll-snap-align: start;
+  }
+  .work .swipe-hint {
+    display: block;
+  }
 }
 @media (max-width: 859.98px) {
   .work-in {
@@ -1002,6 +1048,40 @@ html.seen .loader {
   display: flex;
   flex-direction: column;
 }
+/* Collections head: kicker + a compact display title (the section is pinned at one screen, so the title stays smaller
+   than .h-section to leave the orbit its room), with the slide counter on the title's baseline. */
+.orbit-head {
+  align-items: flex-end;
+  flex-wrap: nowrap;
+  padding-bottom: clamp(14px, 2.6svh, 26px);
+}
+.orbit-head-text {
+  display: grid;
+  gap: clamp(6px, 1.2svh, 12px);
+  min-width: 0;
+}
+.orbit-h {
+  margin: 0;
+  font: 900 clamp(34px, min(6.4vw, 9svh), 104px) / 0.88 var(--font-display);
+  letter-spacing: var(--track);
+  text-wrap: balance;
+}
+.orbit-dot {
+  color: var(--ink);
+}
+.orbit-count {
+  flex: none;
+  margin: 0 0 0.35em;
+  font: 600 13px/1 var(--font-body);
+  letter-spacing: 0.12em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: rgba(13, 12, 11, 0.6);
+}
+.orbit-count span {
+  color: var(--ink);
+  font-weight: 800;
+}
 .orbit-in {
   position: relative;
   flex: 1 1 0;
@@ -1012,6 +1092,8 @@ html.seen .loader {
 .stage {
   position: relative;
   min-height: 0;
+  /* Sideways swipes change the piece (Orbit.tsx); vertical swipes keep scrolling the page natively. */
+  touch-action: pan-y pinch-zoom;
 }
 .stage svg {
   position: absolute;
@@ -1126,15 +1208,21 @@ html.seen .loader {
   background: var(--ink);
 }
 @media (max-width: 859.98px) {
+  /* The copy (titles, spec, dots and link) takes the room it needs and the stage gets the rest: a fixed 46/54 split
+     cut the dots and the link off the bottom of short phones (360x640, 375x667). */
   .orbit-in {
     grid-template-columns: 1fr;
-    grid-template-rows: 46% 54%;
+    grid-template-rows: minmax(0, 1fr) auto;
   }
+  .stage {
+    container-type: size;
+  }
+  /* Card size follows the stage height (cqh), so the arc always fits whatever room the copy leaves. */
   .o-item {
-    width: clamp(120px, min(46vw, calc((100svh - var(--nav-clear) - 56px) * 0.3)), 230px);
+    width: clamp(96px, min(46vw, 58cqh), 230px);
   }
   .o-copy {
-    padding: 0 var(--pad);
+    padding: 0 var(--pad) clamp(10px, 2svh, 20px);
     align-self: start;
   }
   .o-spec dd {
@@ -1148,7 +1236,11 @@ html.seen .loader {
     min-height: 100svh;
   }
   .orbit-in {
+    flex: none;
     min-height: 420px;
+  }
+  .stage {
+    min-height: 180px;
   }
 }
 
@@ -1249,10 +1341,13 @@ html.seen .loader {
   --gw: 176px; /* garment width; keep HANGER_SIZES in Wardrobe.tsx in step */
   --frame: 18px;
   --gap: 12px;
-  --grain-h: url("/img/grain-h.png");
-  --grain-v: url("/img/grain-v.png");
+  --grain-h: url("/img/grain-h.webp");
+  --grain-v: url("/img/grain-v.webp");
   --brass: linear-gradient(180deg, #f7e6b8 0%, #dcb96f 42%, #b48b44 78%, #9c763a 100%);
   position: relative;
+  /* Explicit width: with auto side margins inside a column flex box the rack would grow to the full width of its
+     hangers instead of fitting the screen, and the rail could never scroll sideways. */
+  width: 100%;
   max-width: 1480px;
   margin: clamp(18px, 4svh, 56px) auto 0;
 }
@@ -1303,6 +1398,9 @@ html.seen .loader {
 }
 /* Engraved labels: a recessed groove in the wood; the active one is a brass plate. */
 .wd-tab {
+  /* Holds the visually hidden " products" text inside the scrolling row; positioned against the cornice it widened
+     the page to about 750px on phones. */
+  position: relative;
   flex: none;
   display: inline-flex;
   align-items: center;
@@ -1366,6 +1464,12 @@ html.seen .loader {
 /* A compartment's width follows how many garments it holds (--n), so small ones share a row. */
 .wd-bay {
   position: relative;
+  /* Compartments below the fold skip layout and paint until they near the screen (the full rack has six). */
+  content-visibility: auto;
+  /* Placeholder height until a bay is first rendered: about one hanger card (3:4) plus rail, labels and shelf. A fixed
+     560px made the home rack about 260px taller than the screen on phones until it scrolled into view, so the page
+     jumped and the soft-stop section starts were measured wrong. */
+  contain-intrinsic-size: auto calc(var(--gw) * 4 / 3 + 170px);
   flex: var(--n) 1 calc(var(--n) * (var(--gw) + 26px) + 34px);
   min-width: 0;
   display: flex;
@@ -1768,9 +1872,57 @@ html.seen .loader {
   justify-content: center;
   padding-bottom: 26px; /* room for the floor shadow */
 }
+/* More than one photo: thumbnails sit under the photo, and the photo gives up that much height (--tg). */
+.pv-media {
+  --tg: 0px;
+}
+.pv-media.has-gallery {
+  --tg: 72px;
+  flex-direction: column;
+  align-items: center;
+}
+.pv-thumbs {
+  display: flex;
+  gap: 8px;
+  max-width: 100%;
+  margin: 12px 0 0;
+  padding: 3px;
+  list-style: none;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.pv-thumbs::-webkit-scrollbar {
+  display: none;
+}
+.pv-thumb {
+  display: block;
+  width: 44px;
+  aspect-ratio: 3 / 4;
+  padding: 0;
+  overflow: hidden;
+  border: 2px solid transparent;
+  border-radius: 6px;
+  background: none;
+  opacity: 0.6;
+  cursor: pointer;
+}
+.pv-thumb:hover,
+.pv-thumb:focus-visible {
+  opacity: 1;
+}
+.pv-thumb[aria-pressed="true"] {
+  border-color: currentColor;
+  opacity: 1;
+}
+.pv-thumb img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
 .pv-frame {
   position: relative;
-  width: min(100%, calc((100svh - 190px) * 0.75), 560px);
+  width: min(100%, calc((100svh - 190px - var(--tg)) * 0.75), 560px);
   aspect-ratio: 3/4;
 }
 .pv-info {
@@ -1794,7 +1946,7 @@ html.seen .loader {
   padding-bottom: 0;
 }
 .pdp-page .pv-frame {
-  width: min(100%, calc((100svh - var(--nav-clear-top) - 225px) * 0.75), 520px);
+  width: min(100%, calc((100svh - var(--nav-clear-top) - 225px - var(--tg)) * 0.75), 520px);
 }
 .pdp-info-bands {
   max-width: 720px;
@@ -2014,7 +2166,7 @@ html.seen .loader {
     gap: 28px;
   }
   .pv-frame {
-    width: min(100%, calc(58svh * 0.75), 420px);
+    width: min(100%, calc((58svh - var(--tg)) * 0.75), 420px);
   }
   .pv-esc {
     display: none;
@@ -2026,7 +2178,7 @@ html.seen .loader {
     gap: clamp(10px, 2.4svh, 28px);
   }
   .pdp-page .pv-frame {
-    width: min(100%, calc((100svh - var(--nav-clear-top) - 400px) * 0.75), 300px);
+    width: min(100%, calc((100svh - var(--nav-clear-top) - 400px - var(--tg)) * 0.75), 300px);
     min-width: 96px;
     align-self: center;
   }
@@ -2043,7 +2195,7 @@ html.seen .loader {
     gap: 5vw;
   }
   .pdp-page .pv-frame {
-    width: min(100%, calc((100svh - var(--nav-clear-top) - 225px) * 0.75), 420px);
+    width: min(100%, calc((100svh - var(--nav-clear-top) - 225px - var(--tg)) * 0.75), 420px);
     min-width: 0;
   }
 }
@@ -2062,7 +2214,7 @@ html.seen .loader {
     gap: clamp(8px, 1.6svh, 20px);
   }
   .pdp-page .pv-frame {
-    width: min(100%, calc((100svh - var(--nav-clear-top) - 520px) * 0.75), 300px);
+    width: min(100%, calc((100svh - var(--nav-clear-top) - 520px - var(--tg)) * 0.75), 300px);
   }
   .pdp-info-bands .pdp-desc {
     font-size: 13.5px;
@@ -3055,6 +3207,10 @@ main:focus {
   margin-top: clamp(12px, 3svh, 28px);
 }
 .post-hero .kicker a {
+  /* 44px tall tap target without moving the line. */
+  display: inline-block;
+  padding-block: 14px;
+  margin-block: -14px;
   text-decoration: underline;
   text-decoration-color: var(--yellow);
   text-underline-offset: 4px;

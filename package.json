@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "next dev --port 5192 --hostname 127.0.0.1",
     "build": "next build",
+    "vercel-build": "node scripts/db-migrate.mjs && next build",
     "start": "next start --port 5192 --hostname 127.0.0.1",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",

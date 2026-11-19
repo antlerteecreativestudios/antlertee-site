@@ -46,7 +46,7 @@ async function run() {
     return "Neon (DATABASE_URL)";
   }
 
-  if (process.env.NODE_ENV === "production") throw new Error("DATABASE_URL is not set.");
+  if (process.env.NODE_ENV === "production" || process.env.VERCEL) throw new Error("DATABASE_URL is not set.");
   const { PGlite } = await import("@electric-sql/pglite");
   const dataDir = path.join(root, ".data", "pglite");
   await fs.mkdir(dataDir, { recursive: true });

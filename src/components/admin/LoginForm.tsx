@@ -27,7 +27,7 @@ export function LoginForm() {
         credentials: "same-origin",
       });
       if (res.ok) {
-        router.replace("/admin/leads/");
+        router.replace("/admin/");
         router.refresh();
         return;
       }

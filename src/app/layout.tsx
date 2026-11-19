@@ -9,9 +9,11 @@ import { SiteChrome } from "@/components/SiteChrome";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteNav } from "@/components/SiteNav";
 import { SmoothScroll } from "@/components/SmoothScroll";
+import { TrackingTags } from "@/components/TrackingTags";
 import { brand } from "@/content/site";
 import { metadataBase } from "@/lib/meta";
 import { getMediaOverrides } from "@/server/media";
+import { getActiveConnections } from "@/server/settings";
 
 const gabarito = Gabarito({
   subsets: ["latin"],
@@ -46,11 +48,14 @@ export const viewport: Viewport = {
 
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   // Admin image replacements: one cached read, revalidated on change (see src/server/media.ts).
-  const overrides = await getMediaOverrides();
+  // Tracking and verification ids switched on in the admin (Settings → Connections); cached, never throws.
+  const [overrides, tracking] = await Promise.all([getMediaOverrides(), getActiveConnections()]);
   return (
     <html lang="en" className={`${gabarito.variable} ${onest.variable}`} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: loaderBootScript }} />
+        {tracking.googleVerify && <meta name="google-site-verification" content={tracking.googleVerify} />}
+        {tracking.bingVerify && <meta name="msvalidate.01" content={tracking.bingVerify} />}
       </head>
       <body>
         <a className="skip-link" href="#main">
@@ -74,6 +79,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
             </SiteChrome>
           </MediaOverridesProvider>
         </Providers>
+        <TrackingTags ids={tracking} />
       </body>
     </html>
   );

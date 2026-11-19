@@ -25,14 +25,22 @@ const FAST_WINDOW_MS = 120; // the look-back window used to judge how fast a ges
 const FAST_PX = 300; // wheel distance inside that window that counts as a fast flick (about three mouse-wheel notches)
 const GESTURE_GAP_MS = 160; // quiet time that ends one gesture and starts the next
 const QUIET_RELEASE_MS = 100; // after a stop, release as soon as the wheel has been quiet this long
-const MAX_HOLD_MS = 700; // ...and never absorb a flick for longer than this (a long trackpad tail must not trap anyone)
-const STOP_DURATION_S = 0.7; // length of the eased stop
+const MAX_HOLD_MS = 1200; // ...and never absorb a flick for longer than this (a long trackpad tail must not trap anyone)
+const MIN_HOLD_MS = 350; // a wheel that keeps spinning at the same speed is let through again after this long
+const RISE_FACTOR = 1.3; // a delta this much bigger than the one before is a new push, not the tail of the old flick
+const STOP_SPEED = 2600; // px/s the stop starts at: about what one wheel notch feels like, so the stop does not lurch
+const PREEMPT_SCREENS = 1.6; // a fast flick starts gliding at once when the next section start is within this many screens
+const STOP_MIN_S = 0.6;
+const STOP_MAX_S = 1.3;
 const SETTLE_THRESHOLD = "22%"; // how close to a section start a quiet scroll must end to be pulled onto it
 const SETTLE_DEBOUNCE_MS = 200;
-const SETTLE_DURATION_S = 0.6;
+const SETTLE_DURATION_S = 0.75;
 const MIN_TRAVEL_PX = 24; // a section start closer than this behind/ahead is "here", the next one is the target
 
 const easeOutCubic = (t: number): number => 1 - Math.pow(1 - t, 3);
+/** Gentle at both ends: used for the settle, which starts from rest. */
+const easeInOutCubic = (t: number): number => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+const clamp = (n: number, lo: number, hi: number): number => Math.min(hi, Math.max(lo, n));
 
 interface Point {
   top: number;
@@ -49,6 +57,9 @@ interface Gesture {
   /** Set once the gesture has been stopped at a section start. */
   stoppedAt: number | null;
   lastEvent: number;
+  /** Size of the last absorbed delta, and how many equal-sized ones in a row (a wheel being spun, not a fading tail). */
+  lastAbsorbed: number;
+  flat: number;
 }
 
 export interface SoftStop {
@@ -109,7 +120,7 @@ export function createSoftStop(): SoftStop {
   let removers: (() => void)[] = [];
   let lastInput: "wheel" | "touch" = "wheel";
   let animatingUntil = 0;
-  let gesture: Gesture = { start: 0, dir: 1, fast: false, samples: [], stoppedAt: null, lastEvent: 0 };
+  let gesture: Gesture = { start: 0, dir: 1, fast: false, samples: [], stoppedAt: null, lastEvent: 0, lastAbsorbed: 0, flat: 0 };
   let observer: ResizeObserver | null = null;
   let refreshTimer = 0;
   let unsubscribeScroll: (() => void) | null = null;
@@ -153,17 +164,25 @@ export function createSoftStop(): SoftStop {
     const dir: 1 | -1 = dy > 0 ? 1 : -1;
     const gap = now - gesture.lastEvent;
     if (gap > GESTURE_GAP_MS || dir !== gesture.dir) {
-      gesture = { start: lenis.targetScroll, dir, fast: false, samples: [], stoppedAt: null, lastEvent: now };
+      gesture = { start: lenis.targetScroll, dir, fast: false, samples: [], stoppedAt: null, lastEvent: now, lastAbsorbed: 0, flat: 0 };
     }
     gesture.lastEvent = now;
 
-    // A flick that already stopped at a section start: absorb the rest of it, briefly.
+    // A flick that already stopped at a section start: absorb the rest of it (the fading tail of a trackpad flick), so the
+    // page does not creep past the section start. Let go when the wheel goes quiet, when a new, harder push begins, when
+    // the wheel keeps spinning at one speed (a deliberate scroll) after a short pause, or after MAX_HOLD_MS.
     if (gesture.stoppedAt !== null) {
-      if (gap < QUIET_RELEASE_MS && now - gesture.stoppedAt < MAX_HOLD_MS) {
+      const mag = Math.abs(dy);
+      const held = now - gesture.stoppedAt;
+      const rising = gesture.lastAbsorbed > 0 && mag > gesture.lastAbsorbed * RISE_FACTOR + 12;
+      gesture.flat = gesture.lastAbsorbed > 0 && mag >= gesture.lastAbsorbed * 0.97 ? gesture.flat + 1 : 0;
+      const spinning = gesture.flat >= 3 && held > MIN_HOLD_MS;
+      if (gap < QUIET_RELEASE_MS && held < MAX_HOLD_MS && !rising && !spinning) {
+        gesture.lastAbsorbed = mag;
         if (ev.cancelable) ev.preventDefault();
         return false;
       }
-      gesture = { start: lenis.targetScroll, dir, fast: false, samples: [], stoppedAt: null, lastEvent: now };
+      gesture = { start: lenis.targetScroll, dir, fast: false, samples: [], stoppedAt: null, lastEvent: now, lastAbsorbed: 0, flat: 0 };
     }
 
     gesture.samples.push({ t: now, d: Math.abs(dy) });
@@ -174,12 +193,20 @@ export function createSoftStop(): SoftStop {
       const cap = nextPoint(gesture.start, dir);
       if (cap !== null) {
         const target = lenis.targetScroll + dy;
-        if ((dir > 0 && target >= cap - 2) || (dir < 0 && target <= cap + 2)) {
+        const reaches = (dir > 0 && target >= cap - 2) || (dir < 0 && target <= cap + 2);
+        // Close by: glide there from the very first fast event. Letting the wheel events pile up first would make Lenis
+        // lurch towards a far-off target and the stop would have to brake from that speed.
+        const near = Math.abs(cap - lenis.targetScroll) <= PREEMPT_SCREENS * window.innerHeight;
+        if (reaches || near) {
           if (ev.cancelable) ev.preventDefault();
           gesture.stoppedAt = now;
-          animatingUntil = now + STOP_DURATION_S * 1000 + 150;
+          gesture.lastAbsorbed = Math.abs(dy);
+          gesture.flat = 0;
+          // Glide at about the speed a wheel notch scrolls at, so a longer way takes proportionally longer.
+          const duration = clamp((3 * Math.abs(cap - lenis.animatedScroll)) / STOP_SPEED, STOP_MIN_S, STOP_MAX_S);
+          animatingUntil = now + duration * 1000 + 150;
           syncSettle();
-          lenis.scrollTo(cap, { duration: STOP_DURATION_S, easing: easeOutCubic, userData: { initiator: "soft-stop" } });
+          lenis.scrollTo(cap, { duration, easing: easeOutCubic, userData: { initiator: "soft-stop" } });
           return false;
         }
       }
@@ -210,7 +237,7 @@ export function createSoftStop(): SoftStop {
         distanceThreshold: SETTLE_THRESHOLD,
         debounce: SETTLE_DEBOUNCE_MS,
         duration: SETTLE_DURATION_S,
-        easing: easeOutCubic,
+        easing: easeInOutCubic,
       });
       unsubscribeScroll = instance.on("scroll", syncSettle);
       observer = new ResizeObserver(scheduleRefresh);

@@ -9,6 +9,8 @@ export interface HandoffInfo {
   reference?: string;
   /** Names of the files that were uploaded and saved with the lead. */
   uploaded?: string[];
+  /** Private links to those files (opened by the team from the chat). */
+  links?: { name: string; url: string }[];
   /** The visitor picked files that could not be saved, so they should attach them in the chat. */
   attachLater?: boolean;
 }
@@ -20,9 +22,16 @@ const encodedLength = (s: string) => encodeURIComponent(s).length;
 
 /** Adds the reference and file lines to a drafted message and keeps the whole thing within a safe link length. */
 export function whatsappMessage(body: string, info: HandoffInfo = {}): string {
+  // Many files with long names can make the link list alone too long for a wa.me link: then list names only (the
+  // files are still saved with the request under its reference).
+  if (info.links?.length) {
+    const linkLines = info.links.map((l) => `• ${l.name}: ${l.url}`).join("\n");
+    if (encodedLength(linkLines) > MAX_ENCODED / 2) info = { ...info, links: [], uploaded: info.uploaded?.length ? info.uploaded : info.links.map((l) => l.name) };
+  }
   const tail: string[] = [];
   if (info.reference) tail.push(`Reference: ${info.reference}`);
-  if (info.uploaded?.length) tail.push(`Files saved with this request: ${info.uploaded.join(", ")}`);
+  if (info.links?.length) tail.push(["My files:", ...info.links.map((l) => `• ${l.name}: ${l.url}`)].join("\n"));
+  else if (info.uploaded?.length) tail.push(`Files saved with this request: ${info.uploaded.join(", ")}`);
   if (info.attachLater) tail.push("I will attach my files in this chat.");
   const footer = tail.length ? `\n\n${tail.join("\n")}` : "";
 
@@ -68,7 +77,7 @@ export function goToWhatsApp(tab: Window | null, href: string): boolean {
 export async function saveForHandoff(opts: {
   pickedCount: number;
   upload: () => Promise<UploadedRef[]>;
-  save: (files: UploadedRef[]) => Promise<{ reference: string }>;
+  save: (files: UploadedRef[]) => Promise<{ reference: string; files?: { name: string; url: string }[] }>;
 }): Promise<HandoffInfo> {
   let refs: UploadedRef[] = [];
   try {
@@ -77,12 +86,15 @@ export async function saveForHandoff(opts: {
     refs = [];
   }
   let reference: string | undefined;
+  let links: { name: string; url: string }[] = [];
   try {
-    reference = (await opts.save(refs)).reference;
+    const saved = await opts.save(refs);
+    reference = saved.reference;
+    links = saved.files ?? [];
   } catch {
     reference = undefined;
   }
   // Files only count as saved when the lead that holds them was saved too.
   const uploaded = reference ? refs.map((r) => r.name) : [];
-  return { reference, uploaded, attachLater: opts.pickedCount > uploaded.length };
+  return { reference, uploaded, links: reference ? links : [], attachLater: opts.pickedCount > uploaded.length };
 }

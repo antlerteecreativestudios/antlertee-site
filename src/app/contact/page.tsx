@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { QuoteForm } from "@/components/QuoteForm";
 import { contact, facts, whatsappLink } from "@/content/site";
+import { getProducts } from "@/lib/cms/content";
 import { pageMeta } from "@/lib/meta";
 
 export const metadata = pageMeta({
@@ -25,7 +26,8 @@ function FormFallback() {
  * Two colour zones: an ink hero band (headline and the four ways to reach us, so the top of the page fits one screen)
  * and the paper band that holds the quote form (a form is inherently long, so it scrolls normally).
  */
-export default function ContactPage() {
+export default async function ContactPage() {
+  const products = await getProducts();
   return (
     <>
       <section className="ct-hero band-ink" data-nav="dark" data-snap="fit" aria-labelledby="contact-title">
@@ -67,7 +69,7 @@ export default function ContactPage() {
       <section className="ct-form band-paper" data-nav="light" data-snap="edge" aria-label="Quote form">
         <div className="ct-form-in">
           <Suspense fallback={<FormFallback />}>
-            <QuoteForm />
+            <QuoteForm products={products} />
           </Suspense>
         </div>
       </section>

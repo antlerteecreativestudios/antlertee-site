@@ -17,6 +17,16 @@ describe("whatsappMessage", () => {
     assert.match(m, /Files saved with this request: pack\.pdf, logo\.png/);
   });
 
+  it("lists a private link per saved file instead of bare names", () => {
+    const m = whatsappMessage("Hello", {
+      reference: "AT-9",
+      uploaded: ["pack.pdf"],
+      links: [{ name: "pack.pdf", url: "https://site.test/api/files/l/f/?t=abc" }],
+    });
+    assert.ok(m.includes("My files:\n• pack.pdf: https://site.test/api/files/l/f/?t=abc"), m);
+    assert.doesNotMatch(m, /Files saved with this request/);
+  });
+
   it("asks the visitor to attach files when they could not be saved", () => {
     assert.match(whatsappMessage("Hello", { attachLater: true }), /attach my files in this chat/);
   });
@@ -37,10 +47,15 @@ describe("saveForHandoff", () => {
       upload: async () => [ref("a.pdf"), ref("b.png")],
       save: async (files) => {
         assert.equal(files.length, 2);
-        return { reference: "AT-1" };
+        return { reference: "AT-1", files: [{ name: "a.pdf", url: "https://x.test/f/1?t=1" }] };
       },
     });
-    assert.deepEqual(info, { reference: "AT-1", uploaded: ["a.pdf", "b.png"], attachLater: false });
+    assert.deepEqual(info, {
+      reference: "AT-1",
+      uploaded: ["a.pdf", "b.png"],
+      links: [{ name: "a.pdf", url: "https://x.test/f/1?t=1" }],
+      attachLater: false,
+    });
   });
 
   it("does not throw when uploads fail, and still saves the lead without files", async () => {
@@ -54,7 +69,7 @@ describe("saveForHandoff", () => {
         return { reference: "AT-2" };
       },
     });
-    assert.deepEqual(info, { reference: "AT-2", uploaded: [], attachLater: true });
+    assert.deepEqual(info, { reference: "AT-2", uploaded: [], links: [], attachLater: true });
   });
 
   it("does not throw when saving fails: the chat still opens and files are attached by hand", async () => {
@@ -65,7 +80,7 @@ describe("saveForHandoff", () => {
         throw new Error("no database");
       },
     });
-    assert.deepEqual(info, { reference: undefined, uploaded: [], attachLater: true });
+    assert.deepEqual(info, { reference: undefined, uploaded: [], links: [], attachLater: true });
   });
 
   it("needs no attach hint when no files were picked", async () => {

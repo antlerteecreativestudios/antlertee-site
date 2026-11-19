@@ -1,5 +1,8 @@
 // Site image overrides: shared types and resolution used by <Picture>, page metadata and the admin.
 import { fallbackSrc, getImage, srcSet, type ImageId, type SiteImage } from "@/content/images";
+import generated from "@/content/images.generated.json";
+
+const PLACEHOLDER: ImageId = "factory-own-label";
 
 export interface ImageVariant {
   width: number;
@@ -39,7 +42,9 @@ const variantSrcSet = (variants: ImageVariant[], format: "avif" | "webp") =>
 
 /** The image for a slot: the admin replacement when there is one, otherwise the built-in files. */
 export function resolveImage(id: ImageId, override: MediaOverride | undefined): ResolvedImage {
-  const img: SiteImage = getImage(id);
+  // A product or post created in the content studio has a slot of its own ("cms:<slug>") that exists only once its
+  // photo is uploaded; until then it shows a built-in photo instead of breaking.
+  const img: SiteImage = getImage(Object.hasOwn(generated, id) ? id : PLACEHOLDER);
   const alt = override?.alt ?? img.alt;
   if (override && override.url && override.variants.length > 0) {
     return {

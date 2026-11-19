@@ -1,7 +1,8 @@
 import { Rack } from "@/components/product/Rack";
 import { QuoteCta } from "@/components/QuoteCta";
-import { categories, products } from "@/content/products";
+import { categories } from "@/content/products";
 import { facts } from "@/content/site";
+import { getProducts } from "@/lib/cms/content";
 import { pageMeta } from "@/lib/meta";
 
 export const metadata = pageMeta({
@@ -10,11 +11,13 @@ export const metadata = pageMeta({
   path: "/products/",
 });
 
-export default function ProductsPage() {
+export default async function ProductsPage() {
+  const products = await getProducts();
   return (
     <>
       <Rack
         products={products}
+        totalCount={products.length}
         basePath="/products/"
         showFilters
         titleAs="h1"

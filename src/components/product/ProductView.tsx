@@ -6,6 +6,7 @@ import type { Product } from "@/content/products";
 import { useDialog } from "@/lib/use-dialog";
 import { useMediaQuery } from "@/lib/use-media";
 import { ProductDetails } from "./ProductDetails";
+import { GalleryThumbs, useGallery } from "./ProductGallery";
 import { TurnStage } from "./TurnStage";
 import { GARMENT_SPRING } from "./Wardrobe";
 
@@ -30,6 +31,7 @@ export function ProductView({ product, closing, reduce, onClose, onClosed, retur
   useDialog(ref, !closing, onClose, backRef, returnFocus);
   // Side by side the details slide in from the right; stacked on phones and tablets they rise from below.
   const stacked = useMediaQuery("(max-width: 859.98px)");
+  const gallery = useGallery(product);
   const offset = reduce ? {} : stacked ? { y: 28 } : { x: 40 };
 
   return (
@@ -67,7 +69,7 @@ export function ProductView({ product, closing, reduce, onClose, onClosed, retur
           </span>
         </motion.div>
         <div className="pv-main">
-          <div className="pv-media">
+          <div className={gallery.photos.length > 1 ? "pv-media has-gallery" : "pv-media"}>
             {/* While closing, a copy flies back from here (see Rack), so the slot just holds the layout. */}
             {closing ? (
               <div className="pv-frame" />
@@ -79,9 +81,10 @@ export function ProductView({ product, closing, reduce, onClose, onClosed, retur
                 initial={reduce ? { opacity: 0 } : false}
                 animate={{ opacity: 1 }}
               >
-                <TurnStage image={product.image} alt={`${product.name}, ${product.sub}`} priority />
+                <TurnStage key={gallery.current.id} image={gallery.current.id} alt={gallery.current.alt} priority={gallery.index === 0} />
               </motion.div>
             )}
+            {!closing && <GalleryThumbs photos={gallery.photos} index={gallery.index} onSelect={gallery.setIndex} />}
           </div>
           <motion.div
             className="pv-info"

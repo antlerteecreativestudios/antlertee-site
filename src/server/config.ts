@@ -40,11 +40,16 @@ export type StorageConfig = { kind: "blob"; mediaToken: string; leadsToken: stri
 
 export function storageConfig(): StorageConfig {
   const mediaToken = env("BLOB_READ_WRITE_TOKEN");
-  const leadsToken = env("LEADS_BLOB_READ_WRITE_TOKEN");
+  // The private store's token; Vercel's dashboard names it LEADS_READ_WRITE_TOKEN when connected with the prefix "LEADS".
+  const leadsToken = env("LEADS_BLOB_READ_WRITE_TOKEN") ?? env("LEADS_READ_WRITE_TOKEN");
+  if (mediaToken && leadsToken && mediaToken === leadsToken) {
+    // Customer files would land in the public store: refuse to run rather than expose them.
+    throw new ConfigError("BLOB_READ_WRITE_TOKEN and the private customer-files token are the same store. Use a separate private store for customer files.");
+  }
   if (mediaToken && leadsToken) return { kind: "blob", mediaToken, leadsToken };
   if (isProduction || mediaToken || leadsToken) {
     throw new ConfigError(
-      "Vercel Blob is not fully configured. Set BLOB_READ_WRITE_TOKEN (public store for site media) and LEADS_BLOB_READ_WRITE_TOKEN (private store for customer files); see docs/go-live.md.",
+      "Vercel Blob is not fully configured. Set BLOB_READ_WRITE_TOKEN (public store for site media) and LEADS_BLOB_READ_WRITE_TOKEN or LEADS_READ_WRITE_TOKEN (private store for customer files); see docs/go-live.md.",
     );
   }
   return { kind: "local" };

@@ -4,7 +4,7 @@ export type AdminResult<T = Record<string, unknown>> = { ok: true; data: T } | {
 
 export async function adminRequest<T = Record<string, unknown>>(
   url: string,
-  init: { method: "POST" | "PATCH" | "DELETE"; csrf: string; body?: unknown },
+  init: { method: "POST" | "PUT" | "PATCH" | "DELETE"; csrf: string; body?: unknown },
 ): Promise<AdminResult<T>> {
   let res: Response;
   try {

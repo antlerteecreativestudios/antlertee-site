@@ -7,6 +7,7 @@ import { TechPackSection } from "@/components/techpack/TechPackSection";
 import { bulkSubsteps, faqs, steps } from "@/content/copy";
 import { facts } from "@/content/site";
 import { pageMeta } from "@/lib/meta";
+import { jsonLdScript } from "@/lib/json-ld";
 
 export const metadata = pageMeta({
   title: "Process, tech pack builder and FAQs: yarn to pack",
@@ -30,7 +31,7 @@ export default function ProcessPage() {
   };
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdScript(faqJsonLd) }} />
       <TechPackSection />
 
       <section id="how-it-works" className="hiw" aria-labelledby="how-title">
