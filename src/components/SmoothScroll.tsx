@@ -16,9 +16,21 @@ export function SmoothScroll() {
   useEffect(() => {
     if (reduce) return;
     // lerp 0.1 trailed the wheel by about 0.4s, which read as lag; 0.16 still eases but follows the hand.
-    // Fast flicks stop briefly at the next section start (src/lib/soft-stop.ts). Touch keeps native scrolling.
+    // Fast flicks stop briefly at the next section start (src/lib/soft-stop.ts).
+    // Touch: smoothed too (syncTouch), with gentler momentum than the phone's own, so one flick glides a sensible
+    // distance instead of throwing the page past the pinned sections ("Built here.", Collections) to the bottom.
     const soft = SOFT_STOP_ENABLED ? createSoftStop() : null;
-    const lenis = new Lenis({ autoRaf: true, lerp: 0.16, anchors: true, virtualScroll: soft?.gate });
+    const lenis = new Lenis({
+      autoRaf: true,
+      lerp: 0.16,
+      anchors: true,
+      virtualScroll: soft?.gate,
+      syncTouch: true,
+      syncTouchLerp: 0.09,
+      touchInertiaExponent: 1.35,
+      // Sideways rails (product racks, swipe rows) and scrollable dialogs keep their own native scrolling.
+      allowNestedScroll: true,
+    });
     soft?.attach(lenis);
     softStop.current = soft;
     setLenis(lenis);
