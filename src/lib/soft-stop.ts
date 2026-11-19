@@ -42,7 +42,7 @@ const easeOutCubic = (t: number): number => 1 - Math.pow(1 - t, 3);
 const easeInOutCubic = (t: number): number => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 const clamp = (n: number, lo: number, hi: number): number => Math.min(hi, Math.max(lo, n));
 
-interface Point {
+export interface Point {
   top: number;
   kind: "fit" | "edge";
   /** For a pinned section: the scroll position where its pin ends (settling is off in between). */
@@ -77,7 +77,7 @@ const EXTRA_POINTS: { selector: string; kind: Point["kind"] }[] = [
   { selector: "#tph-panels", kind: "edge" },
 ];
 
-function collectPoints(limit: number): Point[] {
+export function collectPoints(limit: number): Point[] {
   const found: Point[] = [];
   const marked: { el: HTMLElement; kind: Point["kind"] }[] = [];
   document.querySelectorAll<HTMLElement>("[data-snap]").forEach((el) => {

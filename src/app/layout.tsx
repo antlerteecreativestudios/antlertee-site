@@ -10,6 +10,7 @@ import { SiteFooter } from "@/components/SiteFooter";
 import { SiteNav } from "@/components/SiteNav";
 import { SmoothScroll } from "@/components/SmoothScroll";
 import { TrackingTags } from "@/components/TrackingTags";
+import { VercelAnalytics } from "@/components/VercelAnalytics";
 import { brand } from "@/content/site";
 import { metadataBase } from "@/lib/meta";
 import { getMediaOverrides } from "@/server/media";
@@ -80,6 +81,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
           </MediaOverridesProvider>
         </Providers>
         <TrackingTags ids={tracking} />
+        <VercelAnalytics />
       </body>
     </html>
   );

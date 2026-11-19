@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef } from "react";
 import { getLenis, setLenis } from "@/lib/lenis";
 import { SOFT_STOP_ENABLED, createSoftStop, type SoftStop } from "@/lib/soft-stop";
+import { createTouchPager } from "@/lib/touch-pager";
 import { usePrefersReducedMotion } from "@/lib/use-media";
 
 /** Lenis smooth scrolling for the whole site; off under prefers-reduced-motion. */
@@ -20,11 +21,13 @@ export function SmoothScroll() {
     // Touch: smoothed too (syncTouch), with gentler momentum than the phone's own, so one flick glides a sensible
     // distance instead of throwing the page past the pinned sections ("Built here.", Collections) to the bottom.
     const soft = SOFT_STOP_ENABLED ? createSoftStop() : null;
+    // Phones and tablets: one swipe = one section (src/lib/touch-pager.ts).
+    const pager = window.matchMedia("(pointer: coarse)").matches ? createTouchPager() : null;
     const lenis = new Lenis({
       autoRaf: true,
       lerp: 0.16,
       anchors: true,
-      virtualScroll: soft?.gate,
+      virtualScroll: (data) => (pager ? pager.gate(data) : true) && (soft ? soft.gate(data) : true),
       syncTouch: true,
       syncTouchLerp: 0.14,
       touchInertiaExponent: 1.6,
@@ -32,6 +35,7 @@ export function SmoothScroll() {
       allowNestedScroll: true,
     });
     soft?.attach(lenis);
+    pager?.attach(lenis);
     softStop.current = soft;
     setLenis(lenis);
     // Development only: lets the scroll test rig drive Lenis on a virtual clock (removed from production builds).
@@ -39,6 +43,7 @@ export function SmoothScroll() {
       Object.assign(window, { __scrollRig: { Lenis, createSoftStop, app: lenis } });
     }
     return () => {
+      pager?.destroy();
       soft?.destroy();
       softStop.current = null;
       lenis.destroy();
